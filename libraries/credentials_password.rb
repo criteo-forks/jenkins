@@ -47,7 +47,7 @@ class Chef
 
       @current_resource.password(current_credentials[:password]) if current_credentials
 
-      @current_credentials
+      @current_resource
     end
 
     private
