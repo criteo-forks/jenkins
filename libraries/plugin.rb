@@ -44,7 +44,11 @@ class Chef
               kind_of: String
     # TODO: Remove in next major version release
     attribute :install_deps,
-              kind_of: [TrueClass, FalseClass]
+              kind_of: [TrueClass, FalseClass],
+              default: true
+    attribute :ignore_deps_versions,
+              kind_of: [TrueClass, FalseClass],
+              default: false
     attribute :options,
               kind_of: String
 
@@ -110,13 +114,22 @@ The Jenkins plugin `#{plugin}' is not installed. In order to #{action}
         # In that case jenkins does not handle plugin dependencies automatically.
         # Otherwise the plugin is installed through the jenkins update-center
         # (default behaviour). In that case plugin dependencies are handled by jenkins.
-        # if installing latest version
-        install_plugin(
-          new_resource.source,
-          new_resource.name,
-          new_resource.version,
-          cli_opts: new_resource.options
-        )
+        if new_resource.source
+          install_plugin_from_url(
+            new_resource.source,
+            new_resource.name,
+            nil,
+            cli_opts: new_resource.options
+          )
+        else
+          install_plugin_from_update_center(
+            new_resource.name,
+            new_resource.version,
+            cli_opts: new_resource.options,
+            install_deps: new_resource.install_deps,
+            ignore_deps_versions: new_resource.ignore_deps_versions
+          )
+        end
       end
 
       downgrade_block = proc do
@@ -239,7 +252,48 @@ The Jenkins plugin `#{plugin}' is not installed. In order to #{action}
     end
 
     #
-    # Installs a plugin along with all of it's dependencies if version is :latest and source property is not specified.
+    # Installs a plugin along with all of it's dependencies using the
+    # update-center.json data.
+    #
+    # @param [String] name of the plugin to be installed
+    # @param [String] version of the plugin to be installed
+    # @param [Hash] opts the options install plugin with
+    # @option opts [Boolean] :cli_opts additional flags to pass the jenkins cli command
+    # @option opts [Boolean] :install_deps indicates a plugins dependencies should be installed
+    #
+    def install_plugin_from_update_center(plugin_name, plugin_version, opts = {})
+      remote_plugin_data = plugin_universe[plugin_name]
+
+      # Compute some versions; Parse them as `Gem::Version` instances for easy
+      # comparisons.
+      latest_version = plugin_version(remote_plugin_data['version'])
+
+      # Brute-force install all dependencies
+      if opts[:install_deps] && remote_plugin_data['dependencies'].any?
+        Chef::Log.debug "Installing plugin dependencies for #{plugin_name}"
+
+        remote_plugin_data['dependencies'].each do |dep|
+          # continue if any version of the dependency is installed
+          if plugin_installation_manifest(dep['name'])
+            Chef::Log.debug "A version of dependency #{dep['name']} is already installed - skipping"
+            next
+          elsif dep['optional'] == false
+            # only install required dependencies
+            dep_version = opts[:ignore_deps_versions] ? :latest : dep['version']
+            install_plugin_from_update_center(dep['name'], dep_version, opts)
+          end
+        end
+      end
+
+      # Replace the latest version with the desired version in the URL
+      source_url = remote_plugin_data['url']
+      source_url.gsub!(latest_version.to_s, desired_version(plugin_name, plugin_version).to_s)
+
+      install_plugin_from_url(source_url, plugin_name, desired_version(plugin_name, plugin_version), opts)
+    end
+
+    #
+    # Install a plugin from a given hpi (or jpi) source url.
     #
     # @param [String] full url of the *.hpi/*.jpi to install
     # @param [String] name of the plugin to be installed
