@@ -31,8 +31,7 @@ class Chef
 
     # Attributes
     attribute :description,
-              kind_of: String,
-              name_attribute: true
+              kind_of: String
     attribute :secret,
               kind_of: String,
               required: true
@@ -50,7 +49,7 @@ class Chef
 
       @current_resource.secret(current_credentials[:secret]) if current_credentials
 
-      @current_credentials
+      @current_resource
     end
 
     private
@@ -78,8 +77,8 @@ class Chef
     # @see Chef::Resource::JenkinsCredentials#fetch_credentials_groovy
     #
     def fetch_existing_credentials_groovy(groovy_variable_name)
-      <<-EOH.gsub(/^ {8}/, '')
-        #{credentials_for_secret_groovy(new_resource.secret, new_resource.description, groovy_variable_name)}
+      <<-EOH.gsub(/ ^{8}/, '')
+        #{credentials_for_id_groovy(new_resource.id, groovy_variable_name)}
       EOH
     end
 
