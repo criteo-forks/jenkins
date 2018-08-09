@@ -46,6 +46,8 @@ class Chef
     attribute :install_deps,
               kind_of: [TrueClass, FalseClass],
               default: true
+    attribute :checksum,
+              kind_of: String
     attribute :ignore_deps_versions,
               kind_of: [TrueClass, FalseClass],
               default: false
@@ -119,7 +121,8 @@ The Jenkins plugin `#{plugin}' is not installed. In order to #{action}
             new_resource.source,
             new_resource.name,
             nil,
-            cli_opts: new_resource.options
+            cli_opts: new_resource.options,
+            checksum: new_resource.checksum
           )
         else
           install_plugin_from_update_center(
@@ -127,7 +130,8 @@ The Jenkins plugin `#{plugin}' is not installed. In order to #{action}
             new_resource.version,
             cli_opts: new_resource.options,
             install_deps: new_resource.install_deps,
-            ignore_deps_versions: new_resource.ignore_deps_versions
+            ignore_deps_versions: new_resource.ignore_deps_versions,
+            checksum: new_resource.checksum
           )
         end
       end
@@ -260,6 +264,7 @@ The Jenkins plugin `#{plugin}' is not installed. In order to #{action}
     # @param [Hash] opts the options install plugin with
     # @option opts [Boolean] :cli_opts additional flags to pass the jenkins cli command
     # @option opts [Boolean] :install_deps indicates a plugins dependencies should be installed
+    # @option opts [String] :checksum indicates the checksum of the *.hpi/*.jpi to install
     #
     def install_plugin_from_update_center(plugin_name, plugin_version, opts = {})
       remote_plugin_data = plugin_universe[plugin_name]
@@ -300,22 +305,26 @@ The Jenkins plugin `#{plugin}' is not installed. In order to #{action}
     # @param [String] version of the plugin to be installed
     # @param [Hash] opts the options install plugin with
     # @option opts [Boolean] :cli_opts additional flags to pass the jenkins cli command
+    # @option opts [Boolean] :install_deps indicates a plugins dependencies should be installed
+    # @option opts [String] :checksum indicates the checksum of the *.hpi/*.jpi to install
     #
-    def install_plugin(source_url, plugin_name, plugin_version, opts = {})
-      test = (source_url || plugin_version != :latest) ? true : false
-      if test
-        url = if source_url
-                source_url
-              else
-                remote_plugin_data = plugin_universe[plugin_name]
-                # Compute some versions; Parse them as `Gem::Version` instances for easy comparisons.
-                latest_version = plugin_version(remote_plugin_data['version'])
-                # Replace the latest version with the desired version in the URL
-                remote_plugin_data['url'].gsub!(latest_version.to_s, desired_version(plugin_name, plugin_version).to_s)
-              end
-      end
-      ensure_update_center_present!
-      executor.execute!('install-plugin', escape(test ? url : plugin_name), opts[:cli_opts])
+    def install_plugin_from_url(source_url, plugin_name, plugin_version = nil, opts = {})
+      version = plugin_version || Digest::MD5.hexdigest(source_url)
+
+      # Use the remote_file resource to download and cache the plugin (see
+      # comment below for more information).
+      path   = ::File.join(Chef::Config[:file_cache_path], "#{plugin_name}-#{version}.plugin")
+      plugin = Chef::Resource::RemoteFile.new(path, run_context)
+      plugin.source(source_url)
+      plugin.backup(false)
+      plugin.checksum(opts[:checksum]) if opts[:checksum]
+      plugin.run_action(:create)
+
+      # Install the plugin from our local cache on disk. There is a bug in
+      # Jenkins that prevents Jenkins from following 302 redirects, so we
+      # use Chef to download the plugin and then use Jenkins to install it.
+      # It's a bit backwards, but so is Jenkins.
+      executor.execute!('install-plugin', escape('file://' + plugin.path), '-name', escape(plugin_name), opts[:cli_opts])
     end
 
     #
