@@ -214,12 +214,134 @@ class Chef
     end
 
     #
+    # The checksum of the +slave.jar+.
+    #
+    # @return [String]
+    #
+    def slave_jar_checksum
+      @slave_jar_checksum ||= new_resource.checksum
+    end
+
+    #
     # The path to the +slave.jar+ on disk (which may or may not exist).
     #
     # @return [String]
     #
     def slave_jar
       ::File.join(new_resource.remote_fs, 'slave.jar')
+    end
+
+    # Embedded Resources
+
+    #
+    # Creates a `group` resource that represents the system group
+    # specified the `group` attribute. The caller will need to call
+    # `run_action` on the resource.
+    #
+    # @return [Chef::Resource::Group]
+    #
+    def group_resource
+      @group_resource ||= build_resource(:group, new_resource.group) do
+        system(node['jenkins']['master']['use_system_accounts']) # ~FC048 this is a foodcritic bug
+      end
+    end
+
+    #
+    # Creates a `user` resource that represents the system user
+    # specified the `user` attribute. The caller will need to call
+    # `run_action` on the resource.
+    #
+    # @return [Chef::Resource::User]
+    #
+    def user_resource
+      @user_resource ||= build_resource(:user, new_resource.user) do
+        gid(new_resource.group)
+        comment('Jenkins slave user - Created by Chef')
+        home(new_resource.remote_fs)
+        system(node['jenkins']['master']['use_system_accounts']) # ~FC048 this is a foodcritic bug
+      end
+    end
+
+    #
+    # Creates the parent `directory` resource that is a level above where
+    # the actual +remote_fs+ will live. This is required due to a Chef/RedHat
+    # bug where +--create-home-dir+ behavior changed and broke the Internet.
+    #
+    # @return [Chef::Resource::Directory]
+    #
+    def parent_remote_fs_dir_resource
+      @parent_remote_fs_dir_resource ||=
+        begin
+          path = ::File.expand_path(new_resource.remote_fs, '..')
+          build_resource(:directory, path) do
+            recursive(true)
+          end
+        end
+    end
+
+    #
+    # Creates a `directory` resource that represents the directory
+    # specified the `remote_fs` attribute. The caller will need to call
+    # `run_action` on the resource.
+    #
+    # @return [Chef::Resource::Directory]
+    #
+    def remote_fs_dir_resource
+      @remote_fs_dir_resource ||= build_resource(:directory, new_resource.remote_fs) do
+        owner(new_resource.user)
+        group(new_resource.group)
+        recursive(true)
+      end
+    end
+
+    #
+    # Creates a `remote_file` resource that represents the remote
+    # +slave.jar+ file on the Jenkins master. The caller will need to
+    # call `run_action` on the resource.
+    #
+    # @return [Chef::Resource::RemoteFile]
+    #
+    def slave_jar_resource
+      @slave_jar_resource ||=
+        begin
+          build_resource(:remote_file, slave_jar).tap do |r|
+            # We need to use .tap() to access methods in the provider's scope.
+            r.source slave_jar_url
+            r.checksum slave_jar_checksum
+            r.backup(false)
+            r.mode('0755')
+            r.atomic_update(false)
+          end
+        end
+    end
+
+    #
+    # Returns a fully configured service resource that can start the
+    # JNLP slave process. The caller will need to call `run_action` on
+    # the resource.
+    #
+    # @return [Chef::Resource::RunitService]
+    #
+    def service_resource
+      @service_resource ||=
+        begin
+          # Ensure runit is installed on the slave.
+          include_recipe 'runit'
+
+          build_resource(:runit_service, new_resource.service_name).tap do |r|
+            # We need to use .tap() to access methods in the provider's scope.
+            r.cookbook('jenkins')
+            r.run_template_name('jenkins-slave')
+            r.log_template_name('jenkins-slave')
+            r.options(
+              new_resource: new_resource,
+              java_bin:    java,
+              slave_jar:   slave_jar,
+              jnlp_url:    jnlp_url,
+              jnlp_secret: jnlp_secret
+            )
+          end
+        end
     end
   end
 end
