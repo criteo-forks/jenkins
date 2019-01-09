@@ -312,14 +312,16 @@ job must first exist on the Jenkins master!
     def validate_config!
       Chef::Log.debug "Validate #{new_resource} configuration"
 
-      raise("#{new_resource} must specify a configuration file!") if new_resource.config.nil?
-
-      raise("#{new_resource} config `#{new_resource.config}` does not exist!") unless ::File.exist?(new_resource.config)
-
-      begin
-        REXML::Document.new(::File.read(new_resource.config))
-      rescue REXML::ParseException
-        raise("#{new_resource} config `#{new_resource.config}` is not valid XML!")
+      if new_resource.config.nil?
+        raise("#{new_resource} must specify a configuration file!")
+      elsif !::File.exist?(new_resource.config)
+        raise("#{new_resource} config `#{new_resource.config}` does not exist!")
+      else
+        begin
+          REXML::Document.new(::File.read(new_resource.config))
+        rescue REXML::ParseException
+          raise("#{new_resource} config `#{new_resource.config}` is not valid XML!")
+        end
       end
     end
 

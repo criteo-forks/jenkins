@@ -37,12 +37,9 @@ class Chef
 
     property :service_name, String,
               default: 'jenkins-slave'
-
-    property :service_groups, Array,
-              default: lazy { [group] }
-
-    deprecated_property_alias 'runit_groups', 'service_groups',
-      '`runit_groups` was renamed to `service_groups` with the move to systemd services'
+    attribute :supplementary_groups,
+              kind_of: Array,
+              default: []
   end
 end
 
@@ -335,10 +332,12 @@ class Chef
             r.log_template_name('jenkins-slave')
             r.options(
               new_resource: new_resource,
-              java_bin:    java,
-              slave_jar:   slave_jar,
-              jnlp_url:    jnlp_url,
-              jnlp_secret: jnlp_secret
+              java_bin:     java,
+              slave_jar:    slave_jar,
+              jnlp_url:     jnlp_url,
+              jnlp_secret:  jnlp_secret,
+              user:         new_resource.user,
+              groups:       new_resource.supplementary_groups.empty? ? [] : [new_resource.group] + new_resource.supplementary_groups
             )
           end
         end
