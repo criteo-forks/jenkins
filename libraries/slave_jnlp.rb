@@ -182,6 +182,21 @@ class Chef
       @jnlp_url ||= uri_join(endpoint, 'computer', new_resource.slave_name, 'slave-agent.jnlp')
     end
 
+    def instance_identity
+      return @instance_identity if @instance_identity
+      @instance_identity = executor.groovy "println(hudson.remoting.Base64.encode(org.jenkinsci.main.modules.instance_identity.InstanceIdentity.get().getPublic().getEncoded()))"
+    end
+
+    def jnlp_direct_host
+      return @jnlp_direct_host if @jnlp_direct_host
+      @jnlp_direct_host = executor.groovy "println(InetAddress.localHost.hostAddress)"
+    end
+
+    def jnlp_direct_port
+      return @jnlp_direct_port if @jnlp_direct_port
+      @jnlp_direct_port = executor.groovy "println(jenkins.model.Jenkins.instance.getSlaveAgentPort().toString())"
+    end
+
     #
     # Generates the slaves unique JNLP secret using the Groovy API.
     #
