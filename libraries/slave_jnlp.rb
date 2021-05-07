@@ -117,9 +117,12 @@ class Chef
       # end
 
       exec_string = "#{java} #{new_resource.jvm_options}"
-      exec_string << " -jar #{slave_jar}" if slave_jar
-      exec_string << " -secret #{jnlp_secret}" if jnlp_secret
-      exec_string << " -jnlpUrl #{jnlp_url}"
+      exec_string << " -cp #{slave_jar} hudson.remoting.jnlp.Main"
+      exec_string << ' -headless'
+      exec_string << " -workDir #{new_resource.remote_fs}"
+      exec_string << " -direct #{jnlp_direct_host}:#{jnlp_direct_port}"
+      exec_string << ' -protocols JNLP4-connect'
+      exec_string << " -instanceIdentity #{instance_identity} #{jnlp_secret} #{new_resource.slave_name}"
 
       systemd_unit "#{new_resource.service_name}.service" do
         content <<~EOU
