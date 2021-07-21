@@ -109,6 +109,7 @@ class Chef
       @slave_jar_resource.backup(false)
       @slave_jar_resource.mode('0777')
       @slave_jar_resource.atomic_update(false)
+      @slave_jar_resource.cookbook_name = new_resource.cookbook_name
       @slave_jar_resource
     end
 
@@ -141,6 +142,7 @@ class Chef
       @slave_exe_resource.source(new_resource.winsw_url)
       @slave_exe_resource.checksum(new_resource.winsw_checksum)
       @slave_exe_resource.backup(false)
+      @slave_exe_resource.cookbook_name = new_resource.cookbook_name
       @slave_exe_resource
     end
 
