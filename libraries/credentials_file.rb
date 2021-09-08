@@ -114,7 +114,7 @@ class Chef
           #{convert_to_groovy(new_resource.id)},
           #{convert_to_groovy(new_resource.description)},
           #{convert_to_groovy(new_resource.filename)},
-          SecretBytes.fromBytes(#{convert_to_groovy(new_resource.data)}.getBytes())
+          SecretBytes.fromString(#{convert_to_groovy(new_resource.data)})
         )
       EOH
     end
