@@ -49,6 +49,8 @@ class Chef
     attribute :pre_run_cmds,
               kind_of: Array,
               default: []
+    attribute :direct_host,
+              kind_of: String
   end
 end
 
@@ -201,6 +203,14 @@ class Chef
       @slave_xml_resource
     end
 
+    ##
+    # Return the direct host if it is passed as attribute
+    # Otherwise use the default jnlp_direct_host computed from groovy script.
+    def custom_end_host
+      return @custom_end_host ||= new_resource.direct_host unless new_resource.direct_host.empty?
+      return jnlp_direct_host
+    end
+
     #
     # Create bat file from jenkins-slave.bat.erb to launches Jenkins jar as
     # service. Optionally run any commands in :pre_run_cmds before launching jar
@@ -220,7 +230,7 @@ class Chef
         new_resource: new_resource,
         java_bin: java,
         slave_jar: slave_jar,
-        direct_host: jnlp_direct_host,
+        direct_host: custom_end_host,
         direct_port: jnlp_direct_port,
         instance_identity: instance_identity,
         jnlp_url: jnlp_url,

@@ -132,7 +132,7 @@ class Chef
 
     def jnlp_direct_host
       return @jnlp_direct_host if @jnlp_direct_host
-      @jnlp_direct_host = executor.groovy "println(InetAddress.localHost.hostAddress)"
+      @jnlp_direct_host = executor.groovy 'println(System.getProperty("container.host.ip", InetAddress.localHost.hostAddress))'
     end
 
     def jnlp_direct_port
