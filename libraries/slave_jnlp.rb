@@ -40,6 +40,12 @@ class Chef
     attribute :supplementary_groups,
               kind_of: Array,
               default: []
+
+    property :service_groups, Array,
+      default: lazy { [group] }
+
+    deprecated_property_alias 'runit_groups', 'service_groups',
+      '`runit_groups` was renamed to `service_groups` with the move to systemd services'
   end
 end
 
