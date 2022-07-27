@@ -130,6 +130,13 @@ class Chef
       exec_string << ' -protocols JNLP4-connect'
       exec_string << " -instanceIdentity #{instance_identity} #{jnlp_secret} #{new_resource.slave_name}"
 
+      env_vars = %W[HOME=#{new_resource.remote_fs} JENKINS_HOME=#{new_resource.remote_fs} JAVA_HOME=#{node['java']['java_home']}]
+      env_vars << new_resource.environment.map { |k, v| "#{k}=#{v}" }
+
+      file ::File.join('/etc/sysconfig', new_resource.service_name) do
+        content env_vars.join("\n")
+      end
+
       systemd_unit "#{new_resource.service_name}.service" do
         content <<~EOU
           #
@@ -146,8 +153,7 @@ class Chef
           User=#{new_resource.user}
           Group=#{new_resource.group}
           SupplementaryGroups=#{(new_resource.service_groups - [new_resource.group]).join(' ')}
-          Environment="HOME=#{new_resource.remote_fs}"
-          Environment="JENKINS_HOME=#{new_resource.remote_fs}"
+          EnvironmentFile=#{::File.join('/etc/sysconfig', new_resource.service_name)}
           WorkingDirectory=#{new_resource.remote_fs}
           ExecStart=#{exec_string}
 
