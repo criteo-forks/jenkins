@@ -66,7 +66,7 @@ describe Jenkins::SshExecutor do
       end
 
       it 'command args given' do
-        expect(subject).to receive(:execute_command!).with(anything, { 'arg1' => 'val1', 'arg2' => 'val2'} )
+        expect(subject).to receive(:execute_command!).with(anything, { 'arg1' => 'val1', 'arg2' => 'val2' })
         subject.execute!('cmd', { 'arg1' => 'val1', 'arg2' => 'val2' })
       end
 

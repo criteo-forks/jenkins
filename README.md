@@ -20,10 +20,10 @@ Set the attribute `node['jenkins']['executor']['use_ssh_client']` to `true` to u
 
 - SSH path: `node['jenkins']['executor']['ssh'] = '/usr/bin/ssh'`
 - Username: `node['jenkins']['executor']['cli_user'] = 'root'`
-- Private Key: `node['jenkins']['executor']['private_key'] = '/root/.ssh/id_rsa`
+- Private Key: `node.run_state[:jenkins_private_key_path] = '/root/.ssh/id_rsa'`
 - Port: `node['jenkins']['executor']['ssh_port'] = 33_591`
 - SSH options: `node['jenkins']['executor']['ssh_options'] = { 'user_known_hosts_file' => '/dev/null', 'strict_host_key_checking' => 'no' }`
-- Server host: `node['jenkins']['master']['host'] = jenkins-server.com`
+- Server host: `node['jenkins']['master']['host'] = 'jenkins-server.com'`
 
 With the configuration above, the `jenkins_command help` resource would execute:
 

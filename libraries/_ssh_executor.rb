@@ -43,9 +43,9 @@ module Jenkins
       command_options = pieces.last.is_a?(Hash) ? pieces.pop : {}
       command = []
       command << %("#{options[:ssh]}")
-      if options[:ssh_options].kind_of? Hash
+      if options[:ssh_options].is_a? Hash
         options[:ssh_options].each do |key, val|
-          command << "-o#{key.split('_').map { |w| w.capitalize}.join}=#{val}"
+          command << "-o#{key.split('_').map(&:capitalize).join}=#{val}"
         end
       end
       command << %(-u "#{options[:cli_user]}")           if options[:cli_user]
