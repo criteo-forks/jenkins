@@ -20,6 +20,7 @@
 #
 
 require_relative 'credentials'
+require_relative 'credentials_user'
 
 class Chef
   class Resource::JenkinsSecretFileCredentials < Resource::JenkinsUserCredentials
