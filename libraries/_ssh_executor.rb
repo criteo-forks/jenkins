@@ -48,7 +48,7 @@ module Jenkins
           command << "-o#{key.split('_').map(&:capitalize).join}=#{val}"
         end
       end
-      command << %(-u "#{options[:cli_user]}")           if options[:cli_user]
+      command << %(-l "#{options[:cli_user]}")           if options[:cli_user]
       command << %(-i "#{options[:key]}")                if options[:key]
       command << %(-p #{options[:ssh_port]})             if options[:ssh_port]
       command << options[:host]                          if options[:host]

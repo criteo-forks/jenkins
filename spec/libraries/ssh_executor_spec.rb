@@ -55,7 +55,7 @@ describe Jenkins::SshExecutor do
 
       it 'user is given' do
         subject.options[:cli_user] = 'nobody'
-        expect(subject).to receive(:execute_command!).with(array_including('-u "nobody"'), anything)
+        expect(subject).to receive(:execute_command!).with(array_including('-l "nobody"'), anything)
         subject.execute!('cmd')
       end
 
@@ -78,7 +78,7 @@ describe Jenkins::SshExecutor do
         subject.options[:key]         = '/root/.ssh/id_rsa'
         expect(subject).to receive(:execute_command!)
           .with(['"/bin/ssh"', '-oUserKnownHosts=/dev/null', '-oLogLevel=INFO',
-                 '-u "root"', '-i "/root/.ssh/id_rsa"', '-p 12345', 'localhost',
+                 '-l "root"', '-i "/root/.ssh/id_rsa"', '-p 12345', 'localhost',
                  'online-node', 'fake-node'], {})
         subject.execute!('online-node', 'fake-node')
       end
