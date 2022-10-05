@@ -60,7 +60,7 @@ If this problem persists, check your Jenkins log files.
     #
     def executor
       wait_until_ready!
-      ensure_cli_present!
+      ensure_cli_present! unless use_ssh_client?
 
       options = {}.tap do |h|
         h[:cli]      = cli
@@ -77,9 +77,17 @@ If this problem persists, check your Jenkins log files.
         h[:cli_username] = cli_username unless cli_username.nil?
         h[:cli_password] = cli_password unless cli_password.nil?
         h[:cli_credential_file] = cli_credential_file unless cli_credential_file.nil?
+        h[:ssh]         = ssh unless ssh.nil?
+        h[:ssh_port]    = ssh_port unless ssh_port.nil?
+        h[:ssh_options] = ssh_options unless ssh_options.nil?
+        h[:host]        = host unless host.nil?
       end
 
-      Jenkins::Executor.new(options)
+      if use_ssh_client?
+        Jenkins::SshExecutor.new(options)
+      else
+        Jenkins::Executor.new(options)
+      end
     end
 
     #
@@ -209,6 +217,51 @@ If this problem persists, check your Jenkins log files.
     end
 
     private
+
+    #
+    # Boolean method to determine if the executor should use ssh instead of jenkins-cli.
+    #
+    # @return [Boolean]
+    #
+    def use_ssh_client?
+      node['jenkins']['executor']['use_ssh_client'] == true
+    end
+
+    #
+    # The ssh client path
+    #
+    # @return [String]
+    #
+    def ssh
+      node['jenkins']['executor']['ssh']
+    end
+
+    #
+    # The ssh port (optional)
+    #
+    # @return [Integer]
+    #
+    def ssh_port
+      node['jenkins']['executor']['ssh_port'].to_i if node.exist?('jenkins', 'executor', 'ssh_port')
+    end
+
+    #
+    # The ssh options (optional)
+    #
+    # @return [Hash]
+    #
+    def ssh_options
+      node['jenkins']['executor']['ssh_options']
+    end
+
+    #
+    # The Jenkins server host
+    #
+    # @return [String]
+    #
+    def host
+      node['jenkins']['master']['host']
+    end
 
     #
     # The path to the private key for the Jenkins master on disk. This method
@@ -432,6 +485,7 @@ If this problem persists, check your Jenkins log files.
                Errno::ENETUNREACH,
                Errno::EADDRNOTAVAIL,
                Timeout::Error,
+               EOFError,
                OpenURI::HTTPError => e
           # If authentication has been enabled, the server will return an HTTP
           # 403. This is "OK", since it means that the server is actually
