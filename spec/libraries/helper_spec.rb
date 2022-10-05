@@ -21,7 +21,7 @@ end
 describe Subject do
   before do
     allow(subject).to receive(:wait_until_ready!)
-    subject.node['jenkins']['java'] = '/usr/share/bin/java'
+    subject.node['java'] = nil
   end
 
   it 'when using jenkins-cli.jar' do
