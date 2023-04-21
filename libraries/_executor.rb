@@ -72,7 +72,7 @@ module Jenkins
       command << %("#{options[:java]}")
       command << options[:jvm_options].to_s if options[:jvm_options]
       command << %(-jar "#{options[:cli]}")
-      command << %(-s #{URI.escape(options[:endpoint])}) if options[:endpoint]
+      command << %(-s #{URI::Parser.new.escape(options[:endpoint])}) if options[:endpoint]
       command << %(-"#{options[:protocol]}")             if options[:protocol]
       command << %(-user "#{options[:cli_user]}")        if options[:cli_user]
       command << %(-i "#{options[:key]}")                if options[:key]
