@@ -374,15 +374,7 @@ If this problem persists, check your Jenkins log files.
     # @return [String]
     #
     def java
-      if node['java'] && node['java']['java_home']
-        File.join(node['java']['java_home'], 'bin', 'java')
-      elsif node['java'] && node['java']['home']
-        File.join(node['java']['home'], 'bin', 'java')
-      elsif ENV['JAVA_HOME']
-        File.join(ENV['JAVA_HOME'], 'bin', 'java')
-      else
-        'java'
-      end
+      node['jenkins']['java']
     end
 
     #
