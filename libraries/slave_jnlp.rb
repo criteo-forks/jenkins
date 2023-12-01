@@ -379,7 +379,7 @@ class Chef
           Environment="HOME=#{new_resource.remote_fs}"
           Environment="JENKINS_HOME=#{new_resource.remote_fs}"
           WorkingDirectory=#{new_resource.remote_fs}
-          ExecStart=#{exec_string}
+          ExecStart=/bin/bash -lc "#{exec_string}"
 
           [Install]
           WantedBy=multi-user.target
