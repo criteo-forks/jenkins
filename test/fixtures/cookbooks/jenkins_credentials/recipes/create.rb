@@ -2,25 +2,24 @@ require 'openssl'
 
 include_recipe 'jenkins_server_wrapper::default'
 
-fixture_data_base_path = docker? ? '/opt/kitchen/data' : '/tmp/kitchen/data'
+fixture_data_base_path = ::File.join(::File.dirname(Chef::Config[:config_file]), 'data')
 
 # Test basic password credentials creation
 jenkins_password_credentials 'schisamo' do
   id 'schisamo'
   description 'passwords are for suckers'
-  username 'schisamo'
   password 'superseekret'
 end
 
 # Test specifying a UUID-based ID
-jenkins_password_credentials '63e11302-d446-4ba0-8aa4-f5821f74d36f' do
-  username 'schisamo2'
+jenkins_password_credentials 'schisamo2' do
+  id '63e11302-d446-4ba0-8aa4-f5821f74d36f'
   password 'superseekret'
 end
 
 # Test specifying a string-based ID
 jenkins_password_credentials 'schisamo3' do
-  username 'schisamo3'
+  id 'schisamo3'
   password 'superseekret'
 end
 
@@ -34,7 +33,7 @@ end
 # Test private key credentials with passphrase
 jenkins_private_key_credentials 'jenkins2' do
   id 'jenkins2'
-  private_key OpenSSL::PKey::RSA.new(File.read("#{fixture_data_base_path}/test_id_rsa_with_passphrase"), 'secret').to_pem
+  private_key lazy { OpenSSL::PKey::RSA.new(File.read("#{fixture_data_base_path}/test_id_rsa_with_passphrase"), 'secret').to_pem }
   passphrase 'secret'
 end
 
@@ -68,7 +67,7 @@ end
 
 # Plugin required for Secret Text credentials
 jenkins_plugin 'plain-credentials' do
-  ignore_deps_versions true
+  install_deps true
   notifies :restart, 'service[jenkins]', :immediately
 end
 
@@ -78,7 +77,9 @@ jenkins_secret_text_credentials 'dollarbills_secret' do
   secret '$uper$ecret'
 end
 
-jenkins_secret_file_credentials 'file1' do
-  filename 'secret_file1'
-  data 'topSecret'
+# Test creating a file credentials
+jenkins_file_credentials 'myfile' do
+  id 'myfile'
+  filename 'myfile'
+  data 'mydata'
 end
