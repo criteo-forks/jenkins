@@ -35,7 +35,7 @@ class Chef
     end
 
     # Actions
-    actions :create, :delete
+    actions :create, :delete, :create_or_update
     default_action :create
 
     # Attributes
@@ -80,37 +80,43 @@ class Chef
       if current_resource.exists? && correct_config?
         Chef::Log.info("#{new_resource} exists - skipping")
       else
-        converge_by("Create #{new_resource}") do
-          executor.groovy! <<-EOH.gsub(/^ {12}/, '')
-            import jenkins.model.*
-            import com.cloudbees.plugins.credentials.*
-            import com.cloudbees.plugins.credentials.domains.*
-            import hudson.plugins.sshslaves.*;
-
-            global_domain = Domain.global()
-            credentials_store =
-              Jenkins.instance.getExtensionList(
-                'com.cloudbees.plugins.credentials.SystemCredentialsProvider'
-              )[0].getStore()
-
-            #{credentials_groovy}
-
-            #{fetch_existing_credentials_groovy('existing_credentials')}
-
-            if(existing_credentials != null) {
-              credentials_store.updateCredentials(
-                global_domain,
-                existing_credentials,
-                credentials
-              )
-            } else {
-              credentials_store.addCredentials(global_domain, credentials)
-            }
-          EOH
-        end
+        action_create_or_update
       end
     end
 
+    #
+    # Create or update the given credentials.
+    action :create_or_update do
+      description = current_resource.exists? ? "Update #{new_resource}" : "Create #{new_resource}"
+      converge_by(description) do
+        executor.groovy! <<-EOH.gsub(/^ {10}/, '')
+          import jenkins.model.*
+          import com.cloudbees.plugins.credentials.*
+          import com.cloudbees.plugins.credentials.domains.*
+          import hudson.plugins.sshslaves.*;
+
+          global_domain = Domain.global()
+          credentials_store =
+            Jenkins.instance.getExtensionList(
+              'com.cloudbees.plugins.credentials.SystemCredentialsProvider'
+            )[0].getStore()
+
+          #{credentials_groovy}
+
+          #{fetch_existing_credentials_groovy('existing_credentials')}
+
+          if(existing_credentials != null) {
+            credentials_store.updateCredentials(
+              global_domain,
+              existing_credentials,
+              credentials
+            )
+          } else {
+            credentials_store.addCredentials(global_domain, credentials)
+          }
+        EOH
+      end
+    end
     #
     # Delete the given credentials.
     #
