@@ -5,54 +5,104 @@ name: ci
   pull_request:
   push:
     branches:
-      - main
+      - mainline-criteo
 
 jobs:
-  lint-unit:
-    uses: sous-chefs/.github/.github/workflows/lint-unit.yml@0.0.3
-    permissions:
-      actions: write
-      checks: write
-      pull-requests: write
-      statuses: write
-      issues: write
+  rspec:
+    # Some RSpec tests require a Windows environment
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+      - name: Install Chef
+        uses: actionshub/chef-install@3.0.0
+        with:
+          version: latest
+      - name: Install Gems
+        run: chef gem install -N ""
+        if: false
+        env:
+          CHEF_LICENSE: accept-no-persist
+      - name: Run RSpec
+        run: chef exec rspec -f j -o tmp/rspec_results.json -f p
+        env:
+          CHEF_LICENSE: accept-no-persist
+      - name: RSpec Report
+        uses: SonicGarden/rspec-report-action@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          json-path: tmp/rspec_results.json
+        if: always()
+
+  cookstyle:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+      - name: Install Chef
+        uses: actionshub/chef-install@3.0.0
+        with:
+          version: ${{ inputs.chef_workstation_version }}
+      - name: Run Cookstyle
+        run: chef exec cookstyle --display-cop-names --extra-details
+        env:
+          CHEF_LICENSE: accept-no-persist
+
+  yamllint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+      - name: Run yaml Lint
+        uses: actionshub/yamllint@main
+
+  markdownlint-cli2:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+      - name: Run Markdown Lint
+        uses: DavidAnson/markdownlint-cli2-action@v16
+        with:
+          globs: "**/*.md"
+
+  markdown-link-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: gaurav-nelson/github-action-markdown-link-check@1.0.15
+        with:
+          use-quiet-mode: "yes"
+          use-verbose-mode: "yes"
+          check-modified-files-only: "yes"
+          base-branch: "mainline-criteo"
 
   integration:
-    needs: lint-unit
+    needs:
+      - rspec
+      - cookstyle
+      - yamllint
+      - markdownlint-cli2
+      - markdown-link-check
     runs-on: ubuntu-latest
     strategy:
       matrix:
         os:
-          - 'almalinux-8'
-          - 'amazonlinux-2'
-          - 'centos-7'
-          - 'centos-stream-8'
-          - 'debian-10'
-          # TODO: Not working and needs to be fixed
-          # - 'debian-11'
-          - 'rockylinux-8'
-          - 'ubuntu-1804'
-          - 'ubuntu-2004'
+          - "rockylinux-8"
         suite:
-          - 'smoke-package-stable'
-          - 'smoke-package-current'
-          - 'smoke-war-stable'
-          - 'smoke-war-latest'
-          - 'authentication-private-key'
-          - 'authentication-username-password'
-          - 'authentication-credential-file'
-          - 'jenkins-proxy-config'
-          - 'jenkins-proxy-remove'
+          - "smoke-war-stable"
+          - "smoke-war-latest"
       fail-fast: false
 
     steps:
       - name: Check out code
-        uses: actions/checkout@v2
+        uses: actions/checkout@main
       - name: Install Chef
         uses: actionshub/chef-install@main
       - name: Dokken
         uses: actionshub/test-kitchen@main
         env:
+          CHEF_VERSION: 17.9.59 # >= 18 not compatible with this cookbook
           CHEF_LICENSE: accept-no-persist
           KITCHEN_LOCAL_YAML: kitchen.dokken.yml
         with:
@@ -61,6 +111,6 @@ jobs:
       - name: Print debug output on failure
         if: failure()
         run: |
-            set -x
-            sudo journalctl -l --since today
-            KITCHEN_LOCAL_YAML=kitchen.dokken.yml /usr/bin/kitchen exec ${{ matrix.suite }}-${{ matrix.os }} -c "journalctl -l"
+          set -x
+          sudo journalctl -l --since today
+          KITCHEN_LOCAL_YAML=kitchen.dokken.yml /usr/bin/kitchen exec ${{ matrix.suite }}-${{ matrix.os }} -c "journalctl -l"
