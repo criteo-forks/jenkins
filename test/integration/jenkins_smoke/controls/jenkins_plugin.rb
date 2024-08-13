@@ -20,9 +20,9 @@ control 'jenkins_plugin-1.0' do
     its('version') { should eq '1.4.3' }
   end
 
-  describe jenkins_plugin('nexus-jenkins-plugin') do
+  describe jenkins_plugin('workflow-cps') do
     it { should exist }
-    its('version') { should eq '3.4.20190116-104331.e820fec' }
+    its('version') { should eq '3908.vd6b_b_5a_a_54010' }
   end
 
   describe jenkins_plugin('github-oauth') do

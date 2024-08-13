@@ -24,6 +24,8 @@ require_relative 'credentials_user'
 
 class Chef
   class Resource::JenkinsSecretFileCredentials < Resource::JenkinsUserCredentials
+    provides :jenkins_secret_file_credentials
+
     attribute :description,
               kind_of: String,
               default: lazy { |new_resource| "Credentials for #{new_resource.filename} - created by Chef" }
@@ -38,7 +40,6 @@ end
 
 class Chef
   class Provider::JenkinsSecretFileCredentials < Provider::JenkinsUserCredentials
-    use_inline_resources
     provides :jenkins_secret_file_credentials
 
     def load_current_resource
@@ -157,7 +158,7 @@ class Chef
         data: new_resource.data,
       }
 
-      attribute_to_property_map.keys.each do |key|
+      attribute_to_property_map.each_key do |key|
         wanted_credentials[key] = new_resource.send(key)
       end
     end

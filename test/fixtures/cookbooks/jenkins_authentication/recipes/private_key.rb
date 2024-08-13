@@ -41,6 +41,10 @@ jenkins_script 'setup authentication' do
   EOH
 end
 
+# Delete temporary credentials to switch to Anonymous
+node.run_state.delete(:jenkins_username)
+node.run_state.delete(:jenkins_password)
+
 # Run some commands - this will ensure the CLI is correctly passing attributes
 jenkins_command 'clear-queue'
 

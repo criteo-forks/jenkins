@@ -7,7 +7,6 @@ require_relative '_executor'
 
 module Jenkins
   class SshExecutor < Executor
-
     #
     # Create a new Jenkins executor.
     #

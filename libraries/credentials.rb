@@ -40,7 +40,6 @@ class Chef
 
     # Attributes
     attribute :id,
-              name_attribute: true,
               kind_of: String,
               required: true
 

@@ -12,6 +12,7 @@ transport:
 
 provisioner:
   name: dokken
+  deprecations_as_errors: false # chef-33 from java cookbook
 
 verifier:
   name: inspec

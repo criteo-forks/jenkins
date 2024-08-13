@@ -1,11 +1,13 @@
 apt_update 'update' if platform_family?('debian')
 
-adoptopenjdk_install '8' do
-  variant 'hotspot'
-end
+openjdk_install '17'
 
 # node[java] is gone, so manually set java path since some platforms need absolute path for service
 node.default['jenkins']['java'] = '/usr/bin/java'
+
+# temporary credentials
+node.run_state[:jenkins_username] = 'jenkins'
+node.run_state[:jenkins_password] = 'password'
 
 include_recipe 'jenkins::master'
 
@@ -18,6 +20,7 @@ jenkins_plugins = %w(
   display-url-api
   credentials
   matrix-auth
+  sshd
 )
 
 jenkins_plugins.each do |plugin|

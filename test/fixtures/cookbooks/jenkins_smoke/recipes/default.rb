@@ -61,6 +61,8 @@ include_recipe 'jenkins_slave::default'
 # ------------------------------
 include_recipe 'jenkins_user::default'
 
+return if docker? # Agent connection does not work
+
 # The jenkins::_war_package recipe has a delayed restart on the jenkins service
 # When Jenkins starts up, all slaves connect.
 # We need to

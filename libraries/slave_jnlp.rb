@@ -97,11 +97,7 @@ class Chef
         action :create
       end
 
-      if new_resource.use_systemd
-        service_name = "systemd_unit[#{new_resource.service_name}.service]"
-      else
-        service_name = "runit_service[#{new_resource.service_name}]"
-      end
+      service_name = new_resource.use_systemd ? "systemd_unit[#{new_resource.service_name}.service]" : "runit_service[#{new_resource.service_name}]"
 
       declare_resource(:remote_file, slave_jar).tap do |r|
         # We need to use .tap() to access methods in the provider's scope.
@@ -153,7 +149,7 @@ class Chef
 
     def instance_identity
       return @instance_identity if @instance_identity
-      @instance_identity = executor.groovy "println(hudson.remoting.Base64.encode(org.jenkinsci.main.modules.instance_identity.InstanceIdentity.get().getPublic().getEncoded()))"
+      @instance_identity = executor.groovy 'println(hudson.remoting.Base64.encode(org.jenkinsci.main.modules.instance_identity.InstanceIdentity.get().getPublic().getEncoded()))'
     end
 
     def jnlp_direct_host
@@ -163,7 +159,7 @@ class Chef
 
     def jnlp_direct_port
       return @jnlp_direct_port if @jnlp_direct_port
-      @jnlp_direct_port = executor.groovy "println(jenkins.model.Jenkins.instance.getSlaveAgentPort().toString())"
+      @jnlp_direct_port = executor.groovy 'println(jenkins.model.Jenkins.instance.getSlaveAgentPort().toString())'
     end
 
     #
@@ -223,7 +219,7 @@ class Chef
     #
     def group_resource
       @group_resource ||= build_resource(:group, new_resource.group) do
-        system(node['jenkins']['master']['use_system_accounts']) # ~FC048 this is a foodcritic bug
+        system(node['jenkins']['master']['use_system_accounts'])
       end
     end
 
@@ -239,7 +235,7 @@ class Chef
         gid(new_resource.group)
         comment('Jenkins slave user - Created by Chef')
         home(new_resource.remote_fs)
-        system(node['jenkins']['master']['use_system_accounts']) # ~FC048 this is a foodcritic bug
+        system(node['jenkins']['master']['use_system_accounts'])
       end
     end
 

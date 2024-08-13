@@ -9,8 +9,8 @@ jenkins_plugin 'disk-usage' do
 end
 
 # Test installing a specific version with abnormal versioning
-jenkins_plugin 'nexus-jenkins-plugin' do
-  version '3.4.20190116-104331.e820fec'
+jenkins_plugin 'workflow-cps' do
+  version '3908.vd6b_b_5a_a_54010'
 end
 
 # Test installing from a URL

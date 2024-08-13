@@ -25,7 +25,7 @@ provisioner:
         # Sometimes with slow performance the connection is dropped/cut too early
         # 30 seconds was too low, so I bumped it to 5 minutes
         # https://issues.jenkins-ci.org/browse/JENKINS-38623
-        jenkins_args: '--httpKeepAliveTimeout=300000'
+        jenkins_args: '--httpKeepAliveTimeout=300000 --argumentsRealm.roles.jenkins=admin --argumentsRealm.passwd.jenkins=password'
         # This it to help issues we run into on the CI systems
         update_center_sleep: 10
 
