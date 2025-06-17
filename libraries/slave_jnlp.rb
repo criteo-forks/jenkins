@@ -325,28 +325,6 @@ class Chef
     end
 
     def create_with_systemd
-      # disable runit services before starting new service
-      # TODO: remove in future version
-
-      %W(
-        /etc/init.d/#{new_resource.service_name}
-        /etc/service/#{new_resource.service_name}
-      ).each do |f|
-        file f do
-          action :delete
-          notifies :stop, "service[#{new_resource.service_name}]", :before
-        end
-      end
-
-      # runit_service = if platform_family?('debian')
-      #                   'runit'
-      #                 else
-      #                   'runsvdir-start'
-      #                 end
-      # service runit_service do
-      #   action [:stop, :disable]
-      # end
-
       exec_string = "#{java} #{new_resource.jvm_options}"
       exec_string << " -cp #{slave_jar} hudson.remoting.jnlp.Main"
       exec_string << ' -headless'
