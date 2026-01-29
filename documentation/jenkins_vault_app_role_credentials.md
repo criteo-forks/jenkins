@@ -15,18 +15,20 @@ jenkins_vault_app_role_credentials 'vault-approle' do
   description 'Vault AppRole credentials for Jenkins'
   role_id     'my-role-id'
   secret_id   'my-secret-id'
-  path        'approle'  # Optional, defaults to 'approle'
+  path        'approle'     # Optional, defaults to 'approle'
+  use_policies true         # Optional, defaults to true
 end
 ```
 
 ```ruby
 # Create Vault App Role credentials with custom path
 jenkins_vault_app_role_credentials 'vault-jenkins' do
-  id          'vault-jenkins-creds'
-  description 'Vault AppRole credentials with custom path'
-  role_id     'jenkins-role-id'
-  secret_id   'jenkins-secret-id'
-  path        'jenkins'
+  id           'vault-jenkins-creds'
+  description  'Vault AppRole credentials with custom path'
+  role_id      'jenkins-role-id'
+  secret_id    'jenkins-secret-id'
+  path         'jenkins'
+  use_policies true
 end
 ```
 
@@ -45,6 +47,7 @@ end
 - **role_id** - (required) The Role ID used for AppRole authentication with Vault.
 - **secret_id** - (required) The Secret ID used for AppRole authentication with Vault.
 - **path** - (optional) The AppRole authentication mount path in Vault. Defaults to `'approle'`.
+- **use_policies** - (optional) Enable the "Limit Token Policies" option. When enabled, allows isolating policies for different jobs. Defaults to `true`.
 
 ## About AppRole Authentication
 
@@ -57,6 +60,21 @@ When registering an AppRole auth backend in Vault, you can configure:
 - And many more options
 
 For more information, see the [HashiCorp Vault AppRole documentation](https://www.vaultproject.io/docs/auth/approle.html).
+
+## Isolating Policies for Different Jobs
+
+The `use_policies` attribute enables the "Limit Token Policies" feature. When enabled, it allows you to isolate Vault policies for different Jenkins jobs or folders. 
+
+The process works as follows:
+1. The Jenkins job attempts to retrieve a secret from Vault
+2. The AppRole authentication is used to retrieve a new token (if not expired)
+3. The Vault plugin uses the `policies` configuration value with job info to determine a list of policies
+4. If this list is not empty and `use_policies` is enabled, the AppRole token is used to retrieve a new token with only the specified policies applied
+5. This token is then used for all Vault plugin operations in the job
+
+**Note**: The AppRole (or other authentication method) should have all policies configured as `token_policies` and not `identity_policies`, as job-specific tokens inherit all `identity_policies` automatically.
+
+For more information about this feature, see the [HashiCorp Vault plugin documentation on isolating policies](https://plugins.jenkins.io/hashicorp-vault-plugin/#isolating-policies-for-different-jobs).
 
 ## Scopes
 

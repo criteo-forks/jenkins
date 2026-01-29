@@ -41,6 +41,9 @@ class Chef
     attribute :path,
               kind_of: String,
               default: 'approle'
+    attribute :use_policies,
+              kind_of: [TrueClass, FalseClass],
+              default: true
   end
 end
 
@@ -57,6 +60,7 @@ class Chef
         @current_resource.role_id(current_credentials[:role_id])
         @current_resource.secret_id(current_credentials[:secret_id])
         @current_resource.path(current_credentials[:path])
+        @current_resource.use_policies(current_credentials[:use_policies])
       end
 
       @current_resource
@@ -82,6 +86,7 @@ class Chef
           Secret.fromString(#{convert_to_groovy(new_resource.secret_id)}),
           #{convert_to_groovy(new_resource.path)}
         )
+        credentials.setUsePolicies(#{new_resource.use_policies})
       EOH
     end
 
@@ -104,7 +109,8 @@ class Chef
           description:credentials.description,
           role_id:credentials.roleId,
           secret_id:credentials.secretId,
-          path:credentials.path
+          path:credentials.path,
+          use_policies:credentials.usePolicies
         ]
       EOH
     end
@@ -125,6 +131,7 @@ class Chef
         role_id: new_resource.role_id,
         secret_id: new_resource.secret_id,
         path: new_resource.path,
+        use_policies: new_resource.use_policies,
       }
 
       # Don't compare the ID as it is generated
