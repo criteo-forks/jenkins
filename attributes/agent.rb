@@ -60,4 +60,30 @@ default['jenkins']['executor'].tap do |executor|
   # CLI user to pass for ssh/https protocol
   #
   # executor['cli_user'] = 'example_chef_user'
+
+  #
+  # Use SSH client instead of HTTP for Jenkins CLI
+  #
+  executor['use_ssh_client'] = false
+
+  #
+  # SSH binary path (when use_ssh_client is enabled)
+  #
+  executor['ssh'] = '/usr/bin/ssh'
+
+  #
+  # SSH port (when use_ssh_client is enabled)
+  #
+  executor['ssh_port'] = 22
+
+  #
+  # SSH options hash (when use_ssh_client is enabled)
+  # Example: { 'LogLevel' => 'QUIET', 'StrictHostKeyChecking' => 'no' }
+  #
+  executor['ssh_options'] = {}
+
+  #
+  # SSH host for Jenkins CLI (when use_ssh_client is enabled)
+  #
+  executor['host'] = nil
 end

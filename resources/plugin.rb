@@ -7,6 +7,7 @@ provides :jenkins_plugin
 
 property :version, [String, Symbol], default: :latest
 property :source, String
+property :checksum, String
 # TODO: Remove in next major version release
 property :install_deps, [true, false]
 property :options, String
@@ -251,12 +252,19 @@ The Jenkins plugin `#{plugin}' is not installed. In order to #{action}
     if use_url
       plugin_file_path = plugin_file(plugin_name)
 
+      remote_file_resources = {
+        source: url,
+        owner: node['jenkins']['master']['user'],
+        group: node['jenkins']['master']['group'],
+        mode: '0644',
+        action: :create,
+      }
+      remote_file_resources[:checksum] = new_resource.checksum if new_resource.checksum
+
       remote_file plugin_file_path do
-        source url
-        owner node['jenkins']['master']['user']
-        group node['jenkins']['master']['group']
-        mode '0644'
-        action :create
+        remote_file_resources.each do |key, value|
+          send(key, value)
+        end
       end
       # NOTE: Jenkins restart should be done manually after all plugins are installed
       # to avoid systemd rate limiting

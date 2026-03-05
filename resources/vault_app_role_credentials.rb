@@ -2,15 +2,20 @@ require 'json'
 
 unified_mode true
 
-resource_name :jenkins_secret_text_credentials
-provides :jenkins_secret_text_credentials
+resource_name :jenkins_vault_app_role_credentials
+provides :jenkins_vault_app_role_credentials
 
 property :id, String, name_property: true
-property :secret, String, required: true, sensitive: true
 property :description, String,
-         default: lazy { |r| "Secret text #{r.id} - created by Chef" }
+         default: lazy { |r| "Vault AppRole #{r.id} - created by Chef" }
+property :role_id, String, required: true
+property :secret_id, String, required: true, sensitive: true
+property :path, String, default: 'approle'
+property :use_policies, [true, false], default: true
+property :namespace, String
+property :skip_ssl_verification, [true, false], default: false
+property :timeout, Integer, default: 30
 
-# Mark resource as sensitive by default
 def initialize(name, run_context = nil)
   super
   @sensitive = true
@@ -22,7 +27,10 @@ load_current_value do
   if current_creds
     id current_creds[:id]
     description current_creds[:description]
-    secret current_creds[:secret] if current_creds[:secret]
+    role_id current_creds[:role_id]
+    secret_id current_creds[:secret_id] if current_creds[:secret_id]
+    path current_creds[:path]
+    use_policies current_creds[:use_policies]
   else
     current_value_does_not_exist!
   end
@@ -34,66 +42,25 @@ action :create do
   else
     converge_by("Create #{new_resource}") do
       executor.groovy! <<-EOH.gsub(/^ {8}/, '')
-        import jenkins.model.*
-        import com.cloudbees.plugins.credentials.*
-        import com.cloudbees.plugins.credentials.domains.*
-        import hudson.util.Secret;
-        import org.jenkinsci.plugins.plaincredentials.impl.StringCredentialsImpl;
+        import hudson.util.Secret
+        import com.cloudbees.plugins.credentials.CredentialsScope
+        import com.datapipe.jenkins.vault.credentials.VaultAppRoleCredential
 
-        global_domain = Domain.global()
+        global_domain = com.cloudbees.plugins.credentials.domains.Domain.global()
         credentials_store =
           Jenkins.instance.getExtensionList(
             'com.cloudbees.plugins.credentials.SystemCredentialsProvider'
           )[0].getStore()
 
-        credentials = new StringCredentialsImpl(
+        credentials = new VaultAppRoleCredential(
           CredentialsScope.GLOBAL,
           #{convert_to_groovy(new_resource.id)},
           #{convert_to_groovy(new_resource.description)},
-          new Secret(#{convert_to_groovy(new_resource.secret)})
+          #{convert_to_groovy(new_resource.role_id)},
+          Secret.fromString(#{convert_to_groovy(new_resource.secret_id)}),
+          #{convert_to_groovy(new_resource.path)}
         )
-
-        #{credentials_for_id_groovy(new_resource.id, 'existing_credentials')}
-
-        if(existing_credentials != null) {
-          credentials_store.updateCredentials(
-            global_domain,
-            existing_credentials,
-            credentials
-          )
-        } else {
-          credentials_store.addCredentials(global_domain, credentials)
-        }
-      EOH
-    end
-  end
-end
-
-action :create_or_update do
-  if current_resource && correct_config?
-    Chef::Log.info("#{new_resource} exists and is correct - skipping")
-  else
-    description = current_resource ? "Update #{new_resource}" : "Create #{new_resource}"
-    converge_by(description) do
-      executor.groovy! <<-EOH.gsub(/^ {8}/, '')
-        import jenkins.model.*
-        import com.cloudbees.plugins.credentials.*
-        import com.cloudbees.plugins.credentials.domains.*
-        import hudson.util.Secret;
-        import org.jenkinsci.plugins.plaincredentials.impl.StringCredentialsImpl;
-
-        global_domain = Domain.global()
-        credentials_store =
-          Jenkins.instance.getExtensionList(
-            'com.cloudbees.plugins.credentials.SystemCredentialsProvider'
-          )[0].getStore()
-
-        credentials = new StringCredentialsImpl(
-          CredentialsScope.GLOBAL,
-          #{convert_to_groovy(new_resource.id)},
-          #{convert_to_groovy(new_resource.description)},
-          new Secret(#{convert_to_groovy(new_resource.secret)})
-        )
+        credentials.setUsePolicies(#{new_resource.use_policies})
 
         #{credentials_for_id_groovy(new_resource.id, 'existing_credentials')}
 
@@ -149,7 +116,7 @@ action_class do
     Chef::Log.debug "Load #{new_resource} credentials information"
 
     json = executor.groovy! <<-EOH.gsub(/^ {6}/, '')
-      import org.jenkinsci.plugins.plaincredentials.impl.*;
+      import com.datapipe.jenkins.vault.credentials.VaultAppRoleCredential
 
       #{credentials_for_id_groovy(new_resource.id, 'credentials')}
 
@@ -160,10 +127,11 @@ action_class do
       current_credentials = [
         id:credentials.id,
         description:credentials.description,
-        secret:credentials.secret
+        role_id:credentials.roleId,
+        secret_id:credentials.secretId,
+        path:credentials.path,
+        use_policies:credentials.usePolicies
       ]
-
-      current_credentials['secret'] = credentials.secret.plainText
 
       builder = new groovy.json.JsonBuilder(current_credentials)
       println(builder)
@@ -178,10 +146,12 @@ action_class do
   def correct_config?
     wanted_credentials = {
       description: new_resource.description,
-      secret: new_resource.secret,
+      role_id: new_resource.role_id,
+      secret_id: new_resource.secret_id,
+      path: new_resource.path,
+      use_policies: new_resource.use_policies,
     }
 
-    # Don't compare the ID as it is generated
     current_credentials_from_jenkins.dup.tap { |c| c.delete(:id) } == convert_blank_values_to_nil(wanted_credentials)
   end
 end

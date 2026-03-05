@@ -25,6 +25,8 @@ require 'timeout'
 require 'uri'
 require 'addressable/uri'
 
+require_relative '_ssh_executor'
+
 module Jenkins
   module Helper
     class JenkinsTimeout < Timeout::Error; end
@@ -79,7 +81,15 @@ If this problem persists, check your Jenkins log files.
         h[:cli_credential_file] = cli_credential_file unless cli_credential_file.nil?
       end
 
-      Jenkins::Executor.new(options)
+      if use_ssh_client?
+        options[:ssh] = ssh
+        options[:ssh_port] = ssh_port
+        options[:ssh_options] = ssh_options
+        options[:host] = host
+        Jenkins::SshExecutor.new(options)
+      else
+        Jenkins::Executor.new(options)
+      end
     end
 
     #
@@ -447,6 +457,52 @@ If this problem persists, check your Jenkins log files.
     #
     def cli_credential_file
       node.run_state[:jenkins_cli_credential_file] || node['jenkins']['executor']['cli_credential_file']
+    end
+
+    #
+    # Boolean to determine if SSH client should be used instead of HTTP
+    #
+    # @return [Boolean]
+    #
+    def use_ssh_client?
+      return @use_ssh_client if defined?(@use_ssh_client)
+      @use_ssh_client = node['jenkins']['executor']['use_ssh_client']
+    end
+
+    #
+    # SSH binary path
+    #
+    # @return [String]
+    #
+    def ssh
+      node['jenkins']['executor']['ssh'] || '/usr/bin/ssh'
+    end
+
+    #
+    # SSH port
+    #
+    # @return [Integer]
+    #
+    def ssh_port
+      node['jenkins']['executor']['ssh_port'] || 22
+    end
+
+    #
+    # SSH options hash
+    #
+    # @return [Hash]
+    #
+    def ssh_options
+      node['jenkins']['executor']['ssh_options'] || {}
+    end
+
+    #
+    # SSH host for Jenkins CLI
+    #
+    # @return [String]
+    #
+    def host
+      node['jenkins']['executor']['host']
     end
 
     #
