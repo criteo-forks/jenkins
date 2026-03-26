@@ -51,7 +51,49 @@ action :create do
           #{convert_to_groovy(new_resource.id)},
           #{convert_to_groovy(new_resource.description)},
           #{convert_to_groovy(new_resource.filename)},
-          SecretBytes.fromBytes(#{convert_to_groovy(new_resource.data)}.getBytes())
+          SecretBytes.fromBytes(#{convert_to_groovy(new_resource.data)}.getBytes('UTF-8'))
+        )
+
+        #{credentials_for_id_groovy(new_resource.id, 'existing_credentials')}
+
+        if(existing_credentials != null) {
+          credentials_store.updateCredentials(
+            global_domain,
+            existing_credentials,
+            credentials
+          )
+        } else {
+          credentials_store.addCredentials(global_domain, credentials)
+        }
+      EOH
+    end
+  end
+end
+
+action :create_or_update do
+  if current_resource && correct_config?
+    Chef::Log.info("#{new_resource} exists and is correct - skipping")
+  else
+    description = current_resource ? "Update #{new_resource}" : "Create #{new_resource}"
+    converge_by(description) do
+      executor.groovy! <<-EOH.gsub(/^ {8}/, '')
+        import jenkins.model.*
+        import com.cloudbees.plugins.credentials.*
+        import com.cloudbees.plugins.credentials.domains.*
+        import org.jenkinsci.plugins.plaincredentials.impl.*
+
+        global_domain = Domain.global()
+        credentials_store =
+          Jenkins.instance.getExtensionList(
+            'com.cloudbees.plugins.credentials.SystemCredentialsProvider'
+          )[0].getStore()
+
+        credentials = new FileCredentialsImpl(
+          CredentialsScope.GLOBAL,
+          #{convert_to_groovy(new_resource.id)},
+          #{convert_to_groovy(new_resource.description)},
+          #{convert_to_groovy(new_resource.filename)},
+          SecretBytes.fromBytes(#{convert_to_groovy(new_resource.data)}.getBytes('UTF-8'))
         )
 
         #{credentials_for_id_groovy(new_resource.id, 'existing_credentials')}
