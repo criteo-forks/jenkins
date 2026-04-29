@@ -71,10 +71,27 @@ jenkins_plugin 'plain-credentials' do
   notifies :restart, 'service[jenkins]', :immediately
 end
 
+# Plugin required for Vault Text Secret credentials
+jenkins_plugin 'hashicorp-vault-plugin' do
+  install_deps true
+  notifies :restart, 'service[jenkins]', :immediately
+end
+
 # Test creating a secret text with a dollar sign in it
 jenkins_secret_text_credentials 'dollarbills_secret' do
   id 'dollarbills_secret'
   secret '$uper$ecret'
+end
+
+# Test creating a Vault text secret
+jenkins_vault_text_secret_credentials 'vault_text_secret' do
+  id 'vault_text_secret'
+  description 'Vault text secret'
+  path 'secret/jenkins/passwords'
+  prefix_path 'kv'
+  namespace 'admin'
+  engine_version 2
+  vault_key 'password'
 end
 
 # Test creating a file credentials

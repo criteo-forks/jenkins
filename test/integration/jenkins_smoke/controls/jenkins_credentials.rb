@@ -76,6 +76,21 @@ control 'jenkins_credentials-3.0' do
   end
 end
 
+control 'jenkins_credentials-3.1' do
+  impact 0.7
+  title 'Jenkins Vault Text Secret Credentials are created'
+
+  describe jenkins_vault_text_secret_credentials('vault_text_secret') do
+    it { should exist }
+    its('description') { should eq 'Vault text secret' }
+    its('path') { should eq 'secret/jenkins/passwords' }
+    its('prefix_path') { should eq 'kv' }
+    its('namespace') { should eq 'admin' }
+    its('engine_version') { should eq 2 }
+    its('vault_key') { should eq 'password' }
+  end
+end
+
 control 'jenkins_credentials-4.0' do
   impact 0.7
   title 'Jenkins Users Credentials are deleted'
@@ -98,6 +113,10 @@ control 'jenkins_credentials-5.0' do
   end
 
   describe jenkins_secret_text_credentials('secret_text_credentials_to_delete') do
+    it { should_not exist }
+  end
+
+  describe jenkins_vault_text_secret_credentials('vault_text_secret_to_delete') do
     it { should_not exist }
   end
 end

@@ -113,3 +113,51 @@ class JenkinsSecretTextCredentials < JenkinsCredentials
     @xml = nil
   end
 end
+
+class JenkinsVaultTextSecretCredentials < JenkinsCredentials
+  attr_reader :credential_id
+
+  name 'jenkins_vault_text_secret_credentials'
+
+  def initialize(credential_id)
+    @credential_id = credential_id
+  end
+
+  def description
+    try { xml.elements['description'].text }
+  end
+
+  def path
+    try { xml.elements['path'].text }
+  end
+
+  def prefix_path
+    try { xml.elements['prefixPath'].text }
+  end
+
+  def namespace
+    try { xml.elements['namespace'].text }
+  end
+
+  def engine_version
+    try { xml.elements['engineVersion'].text.to_i }
+  end
+
+  def vault_key
+    try { xml.elements['vaultKey'].text }
+  end
+
+  def to_s
+    "Jenkins Vault Text Secret Credentials #{credential_id}"
+  end
+
+  private
+
+  def xml
+    return @xml if @xml
+
+    @xml = REXML::XPath.first(doc, "//*[id/text() = '#{credential_id}' and scope/text() = 'GLOBAL']/")
+  rescue Errno::ENOENT
+    @xml = nil
+  end
+end
