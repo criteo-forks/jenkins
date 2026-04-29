@@ -59,6 +59,14 @@ jenkins_secret_text_credentials 'secret_text_credentials_to_delete' do
   action [:create, :delete]
 end
 
+jenkins_vault_text_secret_credentials 'vault_text_secret_to_delete' do
+  id 'vault_text_secret_to_delete'
+  path 'secret/jenkins/passwords'
+  vault_key 'password'
+
+  action [:create, :delete]
+end
+
 jenkins_file_credentials 'file_to_delete' do
   id 'file_to_delete'
   filename 'file_to_delete'
