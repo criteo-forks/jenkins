@@ -49,6 +49,15 @@ class Chef
       kind_of: [TrueClass, FalseClass],
       default: true
 
+    # CRITEO Specific: [Linux] systemd slice
+    # This describes the slice where the process should live.
+    # Should be an existing slice.
+    # Useful for limiting resource usage.
+    # https://www.freedesktop.org/software/systemd/man/latest/systemd.slice.html
+    property :systemd_slice, String,
+      default: nil,
+      description: 'The systemd slice name like jenkins.slice'
+
     property :runit_scripts_cookbook, String,
       default: 'jenkins',
       description: 'Name of the cookbook holding the runsv script'
@@ -324,6 +333,12 @@ class Chef
       end
     end
 
+    def systemd_slice_line
+      return nil if new_resource.systemd_slice.to_s.empty?
+
+      "Slice=#{new_resource.systemd_slice}"
+    end
+
     def create_with_systemd
       exec_string = "#{java} #{new_resource.jvm_options}"
       exec_string << " -cp #{slave_jar} hudson.remoting.jnlp.Main"
@@ -353,6 +368,7 @@ class Chef
           Environment="JENKINS_HOME=#{new_resource.remote_fs}"
           WorkingDirectory=#{new_resource.remote_fs}
           ExecStart=/bin/bash -lc "#{exec_string}"
+          #{systemd_slice_line}
 
           [Install]
           WantedBy=multi-user.target
