@@ -54,7 +54,7 @@ class Chef
     # Should be an existing slice.
     # Useful for limiting resource usage.
     # https://www.freedesktop.org/software/systemd/man/latest/systemd.slice.html
-    property :systemd_slice, String,
+    property :systemd_slice, [String, NilClass],
       default: nil,
       description: 'The systemd slice name like jenkins.slice'
 
@@ -347,6 +347,7 @@ class Chef
       exec_string << " -direct #{jnlp_direct_host}:#{jnlp_direct_port}"
       exec_string << ' -protocols JNLP4-connect'
       exec_string << " -instanceIdentity #{instance_identity} #{jnlp_secret} #{new_resource.slave_name}"
+      slice_line = systemd_slice_line
 
       systemd_unit "#{new_resource.service_name}.service" do
         content <<~EOU
@@ -368,7 +369,7 @@ class Chef
           Environment="JENKINS_HOME=#{new_resource.remote_fs}"
           WorkingDirectory=#{new_resource.remote_fs}
           ExecStart=/bin/bash -lc "#{exec_string}"
-          #{systemd_slice_line}
+          #{slice_line}
 
           [Install]
           WantedBy=multi-user.target
